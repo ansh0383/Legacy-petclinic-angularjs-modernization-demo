@@ -16,6 +16,7 @@ import org.springframework.samples.petclinic.shared.dto.PetDto;
 import org.springframework.samples.petclinic.shared.dto.PetTypeDto;
 import org.springframework.samples.petclinic.shared.dto.mapper.PetMapper;
 import org.springframework.samples.petclinic.shared.web.AbstractResourceController;
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,7 +71,9 @@ public class PetController extends AbstractResourceController {
     @ApiResponse(responseCode = "200", description = "Pet found")
     @ApiResponse(responseCode = "404", description = "Pet not found")
     public PetDto findPet(@PathVariable int ownerId, @PathVariable int petId) {
-        return petMapper.toDto(petService.findPetById(petId));
+        Pet pet = petService.findPetById(petId);
+        validatePetOwner(pet, ownerId);
+        return petMapper.toDto(pet);
     }
 
     @PostMapping("/owners/{ownerId}/pets")
@@ -100,8 +103,9 @@ public class PetController extends AbstractResourceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Update a pet")
     @ApiResponse(responseCode = "204", description = "Pet updated")
-    public void updatePet(@PathVariable int petId, @Valid @RequestBody PetCreateRequest request) {
+    public void updatePet(@PathVariable int ownerId, @PathVariable int petId, @Valid @RequestBody PetCreateRequest request) {
         Pet pet = petService.findPetById(petId);
+        validatePetOwner(pet, ownerId);
         pet.setName(request.name());
         pet.setBirthDate(request.birthDate());
         for (PetType petType : petService.findPetTypes()) {
@@ -116,7 +120,15 @@ public class PetController extends AbstractResourceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a pet")
     @ApiResponse(responseCode = "204", description = "Pet deleted")
-    public void deletePet(@PathVariable int petId) {
+    public void deletePet(@PathVariable int ownerId, @PathVariable int petId) {
+        Pet pet = petService.findPetById(petId);
+        validatePetOwner(pet, ownerId);
         petService.deletePet(petId);
+    }
+
+    private void validatePetOwner(Pet pet, int ownerId) {
+        if (pet.getOwner() == null || pet.getOwner().getId() != ownerId) {
+            throw new ResourceNotFoundException("Pet", pet.getId());
+        }
     }
 }

@@ -117,7 +117,7 @@ public class PetControllerTests {
         given(petService.findPetById(2)).willReturn(existingPet);
         given(petService.findPetTypes()).willReturn(Arrays.asList(petType));
 
-        mvc.perform(put("/api/v1/owners/1/pets/2")
+        mvc.perform(put("/api/v1/owners/2/pets/2")
                         .content("{\"name\":\"LeoUpdated\",\"birthDate\":\"2020-01-01\",\"typeId\":6}")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -126,6 +126,7 @@ public class PetControllerTests {
 
     private Pet setupPet() {
         Owner owner = new Owner();
+        owner.setId(2);
         owner.setFirstName("George");
         owner.setLastName("Bush");
         owner.setAddress("110 W. Liberty St.");

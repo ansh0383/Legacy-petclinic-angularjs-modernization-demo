@@ -1,10 +1,15 @@
 package org.springframework.samples.petclinic.shared.web.error;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.net.URI;
 import java.time.Instant;
@@ -13,7 +18,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
@@ -32,8 +37,9 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
         pd.setTitle("Validation Error");
         pd.setType(URI.create("https://api.petclinic.com/errors/validation"));
@@ -41,14 +47,6 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(e -> fieldErrors.put(e.getField(), e.getDefaultMessage()));
         pd.setProperty("fieldErrors", fieldErrors);
         pd.setProperty("timestamp", Instant.now());
-        return pd;
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ProblemDetail handleGeneric(Exception ex) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
-        pd.setTitle("Internal Server Error");
-        pd.setProperty("timestamp", Instant.now());
-        return pd;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(pd);
     }
 }

@@ -61,7 +61,7 @@ public class PetControllerTests {
         dog.setId(2);
         dog.setName("dog");
 
-        given(clinicService.findPetTypes()).willReturn(Arrays.asList(cat, dog));
+        given(petService.findPetTypes()).willReturn(Arrays.asList(cat, dog));
 
         mvc.perform(get("/petTypes").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -83,8 +83,8 @@ public class PetControllerTests {
         petType.setId(6);
         petType.setName("hamster");
 
-        given(clinicService.findOwnerById(1)).willReturn(owner);
-        given(clinicService.findPetTypes()).willReturn(Arrays.asList(petType));
+        given(ownerService.findOwnerById(1)).willReturn(owner);
+        given(petService.findPetTypes()).willReturn(Arrays.asList(petType));
 
         mvc.perform(post("/owners/1/pets")
                         .content("{\"name\":\"Leo\",\"birthDate\":\"2020-01-01\",\"typeId\":6}")
@@ -92,7 +92,7 @@ public class PetControllerTests {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
 
-        verify(clinicService).savePet(any(Pet.class));
+        verify(petService).savePet(any(Pet.class));
     }
 
     @Test
@@ -103,8 +103,8 @@ public class PetControllerTests {
         petType.setId(6);
         petType.setName("hamster");
 
-        given(clinicService.findPetById(2)).willReturn(existingPet);
-        given(clinicService.findPetTypes()).willReturn(Arrays.asList(petType));
+        given(petService.findPetById(2)).willReturn(existingPet);
+        given(petService.findPetTypes()).willReturn(Arrays.asList(petType));
 
         mvc.perform(put("/owners/1/pets/2")
                         .content("{\"id\":2,\"name\":\"LeoUpdated\",\"birthDate\":\"2020-01-01\",\"typeId\":6}")

@@ -10,6 +10,8 @@ import org.springframework.samples.petclinic.shared.dto.VisitCreateRequest;
 import org.springframework.samples.petclinic.shared.dto.VisitDto;
 import org.springframework.samples.petclinic.shared.dto.mapper.VisitMapper;
 import org.springframework.samples.petclinic.shared.web.AbstractResourceController;
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
+import org.springframework.samples.petclinic.pet.model.Pet;
 import org.springframework.samples.petclinic.visit.model.Visit;
 import org.springframework.samples.petclinic.visit.service.VisitService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,8 +44,10 @@ public class VisitController extends AbstractResourceController {
     @GetMapping("/owners/{ownerId}/pets/{petId}/visits")
     @Operation(summary = "List all visits for a pet")
     @ApiResponse(responseCode = "200", description = "List of visits")
-    public List<VisitDto> listVisits(@PathVariable int petId) {
-        return petService.findPetById(petId).getVisits().stream()
+    public List<VisitDto> listVisits(@PathVariable int ownerId, @PathVariable int petId) {
+        Pet pet = petService.findPetById(petId);
+        validatePetOwner(pet, ownerId);
+        return pet.getVisits().stream()
             .map(visitMapper::toDto)
             .collect(Collectors.toList());
     }
@@ -52,14 +56,23 @@ public class VisitController extends AbstractResourceController {
     @Operation(summary = "Create a new visit for a pet")
     @ApiResponse(responseCode = "201", description = "Visit created")
     public ResponseEntity<VisitDto> createVisit(
+            @PathVariable int ownerId,
             @PathVariable int petId,
             @Valid @RequestBody VisitCreateRequest request) {
+        Pet pet = petService.findPetById(petId);
+        validatePetOwner(pet, ownerId);
         Visit visit = visitMapper.toEntity(request);
-        petService.findPetById(petId).addVisit(visit);
+        pet.addVisit(visit);
         visitService.saveVisit(visit);
         VisitDto dto = visitMapper.toDto(visit);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
             .path("/{id}").buildAndExpand(visit.getId()).toUri();
         return ResponseEntity.created(location).body(dto);
+    }
+
+    private void validatePetOwner(Pet pet, int ownerId) {
+        if (pet.getOwner() == null || pet.getOwner().getId() != ownerId) {
+            throw new ResourceNotFoundException("Pet", pet.getId());
+        }
     }
 }

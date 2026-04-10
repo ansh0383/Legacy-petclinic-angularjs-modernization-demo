@@ -86,11 +86,7 @@ public class PetController extends AbstractResourceController {
 
         pet.setName(request.name());
         pet.setBirthDate(request.birthDate());
-        for (PetType petType : petService.findPetTypes()) {
-            if (petType.getId() == request.typeId()) {
-                pet.setType(petType);
-            }
-        }
+        pet.setType(findPetType(request.typeId()));
 
         petService.savePet(pet);
         PetDto dto = petMapper.toDto(pet);
@@ -108,11 +104,7 @@ public class PetController extends AbstractResourceController {
         validatePetOwner(pet, ownerId);
         pet.setName(request.name());
         pet.setBirthDate(request.birthDate());
-        for (PetType petType : petService.findPetTypes()) {
-            if (petType.getId() == request.typeId()) {
-                pet.setType(petType);
-            }
-        }
+        pet.setType(findPetType(request.typeId()));
         petService.savePet(pet);
     }
 
@@ -124,6 +116,13 @@ public class PetController extends AbstractResourceController {
         Pet pet = petService.findPetById(petId);
         validatePetOwner(pet, ownerId);
         petService.deletePet(petId);
+    }
+
+    private PetType findPetType(int typeId) {
+        return petService.findPetTypes().stream()
+            .filter(pt -> pt.getId() == typeId)
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("PetType", typeId));
     }
 
     private void validatePetOwner(Pet pet, int ownerId) {

@@ -15,11 +15,8 @@
  */
 package org.springframework.samples.petclinic.shared.web;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-
 /**
  * @author Antoine Rey
  */
-@CrossOrigin(origins = "${petclinic.cors.allowed-origins:http://localhost:4200,http://localhost:8080}")
 public abstract class AbstractResourceController {
 }

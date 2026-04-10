@@ -9,10 +9,14 @@ import org.springframework.samples.petclinic.pet.model.Pet;
 import org.springframework.samples.petclinic.pet.model.PetType;
 import org.springframework.samples.petclinic.pet.repository.PetRepository;
 
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
+
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -31,11 +35,19 @@ public class PetServiceImplTests {
         pet.setId(1);
         pet.setName("Leo");
 
-        given(petRepository.findById(1)).willReturn(pet);
+        given(petRepository.findById(1)).willReturn(Optional.of(pet));
 
         Pet found = petService.findPetById(1);
 
         assertThat(found).isEqualTo(pet);
+    }
+
+    @Test
+    public void shouldThrowWhenPetNotFound() {
+        given(petRepository.findById(999)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> petService.findPetById(999))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

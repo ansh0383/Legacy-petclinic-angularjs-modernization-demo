@@ -15,11 +15,8 @@
  */
 package org.springframework.samples.petclinic.shared.web;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-
 /**
  * @author Antoine Rey
  */
-@CrossOrigin
 public abstract class AbstractResourceController {
 }

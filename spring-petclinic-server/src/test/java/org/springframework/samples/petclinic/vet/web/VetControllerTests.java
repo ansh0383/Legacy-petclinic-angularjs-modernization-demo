@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.samples.petclinic.shared.dto.mapper.VetMapper;
 import org.springframework.samples.petclinic.vet.model.Vet;
 import org.springframework.samples.petclinic.vet.service.VetService;
 import org.springframework.test.web.servlet.MockMvc;
@@ -17,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VetController.class)
+@Import(VetMapper.class)
 public class VetControllerTests {
 
     @Autowired
@@ -33,7 +36,7 @@ public class VetControllerTests {
 
         given(vetService.findVets()).willReturn(Arrays.asList(vet));
 
-        mvc.perform(get("/vets").accept(MediaType.APPLICATION_JSON))
+        mvc.perform(get("/api/v1/vets").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1));
     }

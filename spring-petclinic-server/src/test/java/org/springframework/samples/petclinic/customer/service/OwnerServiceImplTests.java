@@ -8,9 +8,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.samples.petclinic.customer.model.Owner;
 import org.springframework.samples.petclinic.customer.repository.OwnerRepository;
 
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
+
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +47,7 @@ public class OwnerServiceImplTests {
         given(ownerRepository.findById(999)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> ownerService.findOwnerById(999))
-                .isInstanceOf(NoSuchElementException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

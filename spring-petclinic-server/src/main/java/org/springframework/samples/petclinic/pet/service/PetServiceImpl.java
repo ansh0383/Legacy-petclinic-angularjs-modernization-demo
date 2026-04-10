@@ -3,6 +3,7 @@ package org.springframework.samples.petclinic.pet.service;
 import org.springframework.samples.petclinic.pet.model.Pet;
 import org.springframework.samples.petclinic.pet.model.PetType;
 import org.springframework.samples.petclinic.pet.repository.PetRepository;
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
@@ -18,13 +19,20 @@ public class PetServiceImpl implements PetService {
     @Override
     @Transactional(readOnly = true)
     public Pet findPetById(int id) {
-        return petRepository.findById(id);
+        return petRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Pet", id));
     }
 
     @Override
     @Transactional
     public void savePet(Pet pet) {
         petRepository.save(pet);
+    }
+
+    @Override
+    @Transactional
+    public void deletePet(int id) {
+        petRepository.deleteById(id);
     }
 
     @Override

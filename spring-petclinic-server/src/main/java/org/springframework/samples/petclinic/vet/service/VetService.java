@@ -5,4 +5,5 @@ import java.util.Collection;
 
 public interface VetService {
     Collection<Vet> findVets();
+    Vet findVetById(int id);
 }

@@ -1,5 +1,6 @@
 package org.springframework.samples.petclinic.vet.service;
 
+import org.springframework.samples.petclinic.shared.web.error.ResourceNotFoundException;
 import org.springframework.samples.petclinic.vet.model.Vet;
 import org.springframework.samples.petclinic.vet.repository.VetRepository;
 import org.springframework.stereotype.Service;
@@ -21,5 +22,12 @@ public class VetServiceImpl implements VetService {
     @CacheResult(cacheName = "vets")
     public Collection<Vet> findVets() {
         return vetRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Vet findVetById(int id) {
+        return vetRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Vet", id));
     }
 }

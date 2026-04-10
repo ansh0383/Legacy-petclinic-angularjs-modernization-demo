@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.pet.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -45,12 +46,18 @@ public interface PetRepository extends Repository<Pet, Integer> {
      * @param id the id to search for
      * @return the {@link Pet} if found
      */
-    Pet findById(int id);
+    Optional<Pet> findById(int id);
 
     /**
      * Save a {@link Pet} to the data store, either inserting or updating it.
      * @param pet the {@link Pet} to save
      */
     void save(Pet pet);
+
+    /**
+     * Delete a {@link Pet} from the data store by id.
+     * @param id the id of the pet to delete
+     */
+    void deleteById(int id);
 
 }

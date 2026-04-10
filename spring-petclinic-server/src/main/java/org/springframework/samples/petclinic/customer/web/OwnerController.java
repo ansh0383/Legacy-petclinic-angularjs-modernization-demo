@@ -1,106 +1,89 @@
-/*
- * Copyright 2002-2013 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.customer.web;
 
-import java.util.Collection;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.customer.model.Owner;
 import org.springframework.samples.petclinic.customer.service.OwnerService;
+import org.springframework.samples.petclinic.shared.dto.OwnerCreateRequest;
+import org.springframework.samples.petclinic.shared.dto.OwnerDto;
+import org.springframework.samples.petclinic.shared.dto.mapper.OwnerMapper;
 import org.springframework.samples.petclinic.shared.web.AbstractResourceController;
-import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import jakarta.validation.Valid;
+import java.net.URI;
 
-/**
- * @author Juergen Hoeller
- * @author Ken Krebs
- * @author Arjen Poutsma
- * @author Michael Isvy
- */
 @RestController
+@RequestMapping("/api/v1")
+@Tag(name = "Owner", description = "Owner management APIs")
 public class OwnerController extends AbstractResourceController {
 
     private final OwnerService ownerService;
+    private final OwnerMapper ownerMapper;
 
-
-    @Autowired
-    public OwnerController(OwnerService ownerService) {
+    public OwnerController(OwnerService ownerService, OwnerMapper ownerMapper) {
         this.ownerService = ownerService;
+        this.ownerMapper = ownerMapper;
     }
 
-    @InitBinder
-    public void setAllowedFields(WebDataBinder dataBinder) {
-        dataBinder.setDisallowedFields("id");
-    }
-    
-    private Owner retrieveOwner(int ownerId) {
-        return this.ownerService.findOwnerById(ownerId);
+    @GetMapping("/owners")
+    @Operation(summary = "List all owners (paginated)")
+    @ApiResponse(responseCode = "200", description = "Paginated list of owners")
+    public Page<OwnerDto> findAll(Pageable pageable) {
+        return ownerService.findAll(pageable).map(ownerMapper::toDto);
     }
 
-    /**
-     * Create Owner
-     */
-    @RequestMapping(value = "/owners", method = RequestMethod.POST)
-    @ResponseStatus(HttpStatus.CREATED)
-    public void createOwner(@Valid @RequestBody Owner owner) {
-    	this.ownerService.saveOwner(owner);
-    }
-    
-    /**
-     * Read single Owner
-     */
-    @RequestMapping(value = "/owners/{ownerId}", method = RequestMethod.GET)
-    public Owner findOwner(@PathVariable("ownerId") int ownerId) {
-        return retrieveOwner(ownerId);
-    }
-    
-    /**
-     * Read List of Owners
-     */
-    @GetMapping("/owners/list")
-    public Collection<Owner> findAll() {
-        return ownerService.findAll();
-    }
-    
-    /**
-     * Update Owner
-     */
-    @RequestMapping(value = "/owners/{ownerId}", method = RequestMethod.PUT)
-    public Owner updateOwner(@PathVariable("ownerId") int ownerId, @Valid @RequestBody Owner ownerRequest) {
-    	Owner ownerModel = retrieveOwner(ownerId);
-    	// This is done by hand for simplicity purpose. In a real life use-case we should consider using MapStruct.
-    	ownerModel.setFirstName(ownerRequest.getFirstName());
-    	ownerModel.setLastName(ownerRequest.getLastName());
-    	ownerModel.setCity(ownerRequest.getCity());
-    	ownerModel.setAddress(ownerRequest.getAddress());
-    	ownerModel.setTelephone(ownerRequest.getTelephone());
-        this.ownerService.saveOwner(ownerModel);
-        return ownerModel;
+    @GetMapping("/owners/{ownerId}")
+    @Operation(summary = "Find owner by ID")
+    @ApiResponse(responseCode = "200", description = "Owner found")
+    @ApiResponse(responseCode = "404", description = "Owner not found")
+    public OwnerDto findOwner(@PathVariable int ownerId) {
+        return ownerMapper.toDto(ownerService.findOwnerById(ownerId));
     }
 
+    @PostMapping("/owners")
+    @Operation(summary = "Create a new owner")
+    @ApiResponse(responseCode = "201", description = "Owner created")
+    public ResponseEntity<OwnerDto> createOwner(@Valid @RequestBody OwnerCreateRequest request) {
+        Owner owner = ownerMapper.toEntity(request);
+        ownerService.saveOwner(owner);
+        OwnerDto dto = ownerMapper.toDto(owner);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{id}").buildAndExpand(owner.getId()).toUri();
+        return ResponseEntity.created(location).body(dto);
+    }
 
+    @PutMapping("/owners/{ownerId}")
+    @Operation(summary = "Update an existing owner")
+    @ApiResponse(responseCode = "200", description = "Owner updated")
+    @ApiResponse(responseCode = "404", description = "Owner not found")
+    public OwnerDto updateOwner(@PathVariable int ownerId, @Valid @RequestBody OwnerCreateRequest request) {
+        Owner owner = ownerService.findOwnerById(ownerId);
+        ownerMapper.updateEntity(owner, request);
+        ownerService.saveOwner(owner);
+        return ownerMapper.toDto(owner);
+    }
 
+    @DeleteMapping("/owners/{ownerId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete an owner")
+    @ApiResponse(responseCode = "204", description = "Owner deleted")
+    public void deleteOwner(@PathVariable int ownerId) {
+        ownerService.findOwnerById(ownerId);
+        ownerService.deleteOwner(ownerId);
+    }
 }

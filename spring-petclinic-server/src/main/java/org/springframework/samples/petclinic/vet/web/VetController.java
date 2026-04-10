@@ -1,47 +1,47 @@
-/*
- * Copyright 2002-2013 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.vet.web;
 
-import java.util.Collection;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.samples.petclinic.shared.dto.VetDto;
+import org.springframework.samples.petclinic.shared.dto.mapper.VetMapper;
 import org.springframework.samples.petclinic.shared.web.AbstractResourceController;
-import org.springframework.samples.petclinic.vet.model.Vet;
 import org.springframework.samples.petclinic.vet.service.VetService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * @author Juergen Hoeller
- * @author Mark Fisher
- * @author Ken Krebs
- * @author Arjen Poutsma
- */
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
+@RequestMapping("/api/v1")
+@Tag(name = "Vet", description = "Veterinarian APIs")
 public class VetController extends AbstractResourceController {
 
     private final VetService vetService;
+    private final VetMapper vetMapper;
 
-    @Autowired
-    public VetController(VetService vetService) {
+    public VetController(VetService vetService, VetMapper vetMapper) {
         this.vetService = vetService;
+        this.vetMapper = vetMapper;
     }
 
     @GetMapping("/vets")
-    public Collection<Vet> showResourcesVetList() {
-        return this.vetService.findVets();
+    @Operation(summary = "List all veterinarians")
+    @ApiResponse(responseCode = "200", description = "List of veterinarians")
+    public List<VetDto> listVets() {
+        return vetService.findVets().stream()
+            .map(vetMapper::toDto)
+            .collect(Collectors.toList());
+    }
+
+    @GetMapping("/vets/{vetId}")
+    @Operation(summary = "Find a veterinarian by ID")
+    @ApiResponse(responseCode = "200", description = "Vet found")
+    @ApiResponse(responseCode = "404", description = "Vet not found")
+    public VetDto findVet(@PathVariable int vetId) {
+        return vetMapper.toDto(vetService.findVetById(vetId));
     }
 }

@@ -1,91 +1,122 @@
-/*
- * Copyright 2002-2013 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.pet.web;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.customer.model.Owner;
 import org.springframework.samples.petclinic.customer.service.OwnerService;
 import org.springframework.samples.petclinic.pet.model.Pet;
 import org.springframework.samples.petclinic.pet.model.PetType;
 import org.springframework.samples.petclinic.pet.service.PetService;
+import org.springframework.samples.petclinic.shared.dto.PetCreateRequest;
+import org.springframework.samples.petclinic.shared.dto.PetDto;
+import org.springframework.samples.petclinic.shared.dto.PetTypeDto;
+import org.springframework.samples.petclinic.shared.dto.mapper.PetMapper;
 import org.springframework.samples.petclinic.shared.web.AbstractResourceController;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.Collection;
+import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * @author Juergen Hoeller
- * @author Ken Krebs
- * @author Arjen Poutsma
- */
 @RestController
+@RequestMapping("/api/v1")
+@Tag(name = "Pet", description = "Pet management APIs")
 public class PetController extends AbstractResourceController {
 
     private final PetService petService;
     private final OwnerService ownerService;
+    private final PetMapper petMapper;
 
-    @Autowired
-    public PetController(PetService petService, OwnerService ownerService) {
+    public PetController(PetService petService, OwnerService ownerService, PetMapper petMapper) {
         this.petService = petService;
         this.ownerService = ownerService;
+        this.petMapper = petMapper;
     }
 
-    @GetMapping("/petTypes")
-    Collection<PetType> getPetTypes() {
-        return petService.findPetTypes();
+    @GetMapping("/pet-types")
+    @Operation(summary = "List all pet types")
+    @ApiResponse(responseCode = "200", description = "List of pet types")
+    public List<PetTypeDto> getPetTypes() {
+        return petService.findPetTypes().stream()
+            .map(petMapper::toTypeDto)
+            .collect(Collectors.toList());
+    }
+
+    @GetMapping("/owners/{ownerId}/pets")
+    @Operation(summary = "List all pets for an owner")
+    @ApiResponse(responseCode = "200", description = "List of pets")
+    public List<PetDto> listPets(@PathVariable int ownerId) {
+        Owner owner = ownerService.findOwnerById(ownerId);
+        return owner.getPets().stream()
+            .map(petMapper::toDto)
+            .collect(Collectors.toList());
+    }
+
+    @GetMapping("/owners/{ownerId}/pets/{petId}")
+    @Operation(summary = "Find a pet by ID")
+    @ApiResponse(responseCode = "200", description = "Pet found")
+    @ApiResponse(responseCode = "404", description = "Pet not found")
+    public PetDto findPet(@PathVariable int ownerId, @PathVariable int petId) {
+        return petMapper.toDto(petService.findPetById(petId));
     }
 
     @PostMapping("/owners/{ownerId}/pets")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void processCreationForm(
-            @RequestBody PetRequest petRequest,
-            @PathVariable("ownerId") int ownerId) {
-
+    @Operation(summary = "Create a new pet for an owner")
+    @ApiResponse(responseCode = "201", description = "Pet created")
+    public ResponseEntity<PetDto> createPet(@PathVariable int ownerId, @Valid @RequestBody PetCreateRequest request) {
         Pet pet = new Pet();
-        Owner owner = this.ownerService.findOwnerById(ownerId);
+        Owner owner = ownerService.findOwnerById(ownerId);
         owner.addPet(pet);
 
-        save(pet, petRequest);
-    }
-
-    @PutMapping("/owners/{ownerId}/pets/{petId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void processUpdateForm(@RequestBody PetRequest petRequest) {
-        save(petService.findPetById(petRequest.getId()), petRequest);
-    }
-
-    private void save(Pet pet, PetRequest petRequest) {
-
-        pet.setName(petRequest.getName());
-        pet.setBirthDate(petRequest.getBirthDate());
-
+        pet.setName(request.name());
+        pet.setBirthDate(request.birthDate());
         for (PetType petType : petService.findPetTypes()) {
-            if (petType.getId() == petRequest.getTypeId()) {
+            if (petType.getId() == request.typeId()) {
                 pet.setType(petType);
             }
         }
 
         petService.savePet(pet);
+        PetDto dto = petMapper.toDto(pet);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{id}").buildAndExpand(pet.getId()).toUri();
+        return ResponseEntity.created(location).body(dto);
     }
 
-    @GetMapping("/owners/*/pets/{petId}")
-    public PetDetails findPet(@PathVariable("petId") int petId) {
-        Pet pet = this.petService.findPetById(petId);
-        return new PetDetails(pet);
+    @PutMapping("/owners/{ownerId}/pets/{petId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Update a pet")
+    @ApiResponse(responseCode = "204", description = "Pet updated")
+    public void updatePet(@PathVariable int petId, @Valid @RequestBody PetCreateRequest request) {
+        Pet pet = petService.findPetById(petId);
+        pet.setName(request.name());
+        pet.setBirthDate(request.birthDate());
+        for (PetType petType : petService.findPetTypes()) {
+            if (petType.getId() == request.typeId()) {
+                pet.setType(petType);
+            }
+        }
+        petService.savePet(pet);
     }
 
+    @DeleteMapping("/owners/{ownerId}/pets/{petId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a pet")
+    @ApiResponse(responseCode = "204", description = "Pet deleted")
+    public void deletePet(@PathVariable int petId) {
+        petService.deletePet(petId);
+    }
 }

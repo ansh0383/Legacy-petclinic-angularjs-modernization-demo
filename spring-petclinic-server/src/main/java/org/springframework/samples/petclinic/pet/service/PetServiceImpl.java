@@ -28,6 +28,12 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
+    @Transactional
+    public void deletePet(int id) {
+        petRepository.deleteById(id);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Collection<PetType> findPetTypes() {
         return petRepository.findPetTypes();

@@ -4,16 +4,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.samples.petclinic.customer.model.Owner;
 import org.springframework.samples.petclinic.pet.model.Pet;
 import org.springframework.samples.petclinic.pet.service.PetService;
+import org.springframework.samples.petclinic.shared.dto.mapper.VisitMapper;
 import org.springframework.samples.petclinic.visit.model.Visit;
 import org.springframework.samples.petclinic.visit.service.VisitService;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VisitController.class)
+@Import(VisitMapper.class)
 public class VisitControllerTests {
 
     @Autowired
@@ -38,11 +42,17 @@ public class VisitControllerTests {
 
         given(petService.findPetById(1)).willReturn(pet);
 
-        mvc.perform(post("/owners/1/pets/1/visits")
+        doAnswer(invocation -> {
+            Visit visit = invocation.getArgument(0);
+            visit.setId(99);
+            return null;
+        }).when(visitService).saveVisit(any(Visit.class));
+
+        mvc.perform(post("/api/v1/owners/1/pets/1/visits")
                         .content("{\"date\":\"2023-01-01\",\"description\":\"checkup\"}")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isCreated());
 
         verify(visitService).saveVisit(any(Visit.class));
     }
@@ -63,7 +73,7 @@ public class VisitControllerTests {
 
         given(petService.findPetById(1)).willReturn(pet);
 
-        mvc.perform(get("/owners/1/pets/1/visits").accept(MediaType.APPLICATION_JSON))
+        mvc.perform(get("/api/v1/owners/1/pets/1/visits").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(2));
@@ -75,11 +85,17 @@ public class VisitControllerTests {
 
         given(petService.findPetById(1)).willReturn(pet);
 
-        mvc.perform(post("/owners/1/pets/1/visits")
+        doAnswer(invocation -> {
+            Visit visit = invocation.getArgument(0);
+            visit.setId(100);
+            return null;
+        }).when(visitService).saveVisit(any(Visit.class));
+
+        mvc.perform(post("/api/v1/owners/1/pets/1/visits")
                         .content("{\"date\":\"2023-01-01\",\"description\":\"\"}")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isCreated());
     }
 
     private Pet setupPetWithOwner() {

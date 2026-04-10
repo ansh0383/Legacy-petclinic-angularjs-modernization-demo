@@ -53,4 +53,10 @@ public interface PetRepository extends Repository<Pet, Integer> {
      */
     void save(Pet pet);
 
+    /**
+     * Delete a {@link Pet} from the data store by id.
+     * @param id the id of the pet to delete
+     */
+    void deleteById(int id);
+
 }

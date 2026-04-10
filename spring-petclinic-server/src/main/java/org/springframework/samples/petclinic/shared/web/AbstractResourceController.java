@@ -20,6 +20,6 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 /**
  * @author Antoine Rey
  */
-@CrossOrigin
+@CrossOrigin(origins = "${petclinic.cors.allowed-origins:http://localhost:4200,http://localhost:8080}")
 public abstract class AbstractResourceController {
 }

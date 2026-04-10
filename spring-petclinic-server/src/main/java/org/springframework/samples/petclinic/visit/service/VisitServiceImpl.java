@@ -18,4 +18,10 @@ public class VisitServiceImpl implements VisitService {
     public void saveVisit(Visit visit) {
         visitRepository.save(visit);
     }
+
+    @Override
+    @Transactional
+    public void deleteVisit(int id) {
+        visitRepository.deleteById(id);
+    }
 }
